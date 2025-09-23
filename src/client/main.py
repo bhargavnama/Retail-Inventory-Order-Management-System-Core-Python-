@@ -1,11 +1,14 @@
 # src/cli/main.py
 import argparse
 import json
-from src.services import product_service, order_service
-from src.dao import product_dao, customer_dao
- 
+from src.services import order_service
+from src.services.product_service import Product_service
+from src.dao.product_dao import Product
+from src.services.customer_service import Customer_service
+
 def cmd_product_add(args):
     try:
+        product_service = Product_service()
         p = product_service.add_product(args.name, args.sku, args.price, args.stock, args.category)
         print("Created product:")
         print(json.dumps(p, indent=2, default=str))
@@ -13,16 +16,30 @@ def cmd_product_add(args):
         print("Error:", e)
  
 def cmd_product_list(args):
-    ps = product_dao.list_products(limit=100)
+    product = Product()
+    ps = product.list_products(limit=100)
     print(json.dumps(ps, indent=2, default=str))
  
 def cmd_customer_add(args):
+    customer = Customer_service()
     try:
-        c = customer_dao.create_customer(args.name, args.email, args.phone, args.city)
+        c = customer.add_customer(args.name, args.email, args.phone, args.city)
         print("Created customer:")
         print(json.dumps(c, indent=2, default=str))
     except Exception as e:
         print("Error:", e)
+        
+def cmd_customer_update(args):
+    c = Customer_service()
+    
+    fields = {}
+    if args.email: fields["email"] = args.email
+    if args.phone: fields["phone"] = args.phone
+    resp = c.update_details(args.cust_id, fields)
+    if resp:
+        print(resp)
+    else:
+        print("There are no recordes with the given id")
  
 def cmd_order_create(args):
     # items provided as prod_id:qty strings
@@ -83,6 +100,13 @@ def build_parser():
     addc.add_argument("--phone", required=True)
     addc.add_argument("--city", default=None)
     addc.set_defaults(func=cmd_customer_add)
+    
+    # Update Customer
+    addcu = pcust_sub.add_parser("update")
+    addcu.add_argument("--cust_id", required=True)
+    addcu.add_argument("--email", default=None)
+    addcu.add_argument("--phone", default=None)
+    addcu.set_defaults(func=cmd_customer_update)
  
     # order
     porder = sub.add_parser("order")
